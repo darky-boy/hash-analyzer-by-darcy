@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .hash-card {
+    @apply bg-slate-800 border border-slate-700 rounded-lg p-6 shadow-lg;
+  }
+  
+  .hash-input {
+    @apply bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors;
+  }
+  
+  .hash-button {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition-colors focus:ring-2 focus:ring-blue-500/50;
+  }
+  
+  .confidence-bar {
+    @apply w-full bg-slate-700 rounded-full h-2 overflow-hidden;
+  }
+  
+  .confidence-fill {
+    @apply h-full transition-all duration-300 ease-out;
+  }
+  
+  .confidence-green {
+    @apply bg-green-500;
+  }
+  
+  .confidence-yellow {
+    @apply bg-yellow-500;
+  }
+  
+  .confidence-red {
+    @apply bg-red-500;
+  }
+  
+  /* Enhanced UI Components */
+  .glass-effect {
+    @apply backdrop-blur-sm bg-white/5 border border-white/10;
+  }
+  
+  .gradient-border {
+    @apply relative;
+  }
+  
+  .gradient-border::before {
+    content: '';
+    @apply absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 p-[1px];
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: subtract;
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}

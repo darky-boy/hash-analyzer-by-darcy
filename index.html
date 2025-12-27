@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash Analyzer</title>
+    <link rel="icon" type="image/png" href="frontend/public/favicon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hash-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .hash-input {
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            color: #f1f5f9;
+        }
+        
+        .hash-input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .hash-button {
+            background: #2563eb;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .hash-button:hover {
+            background: #1d4ed8;
+        }
+        
+        .hash-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            background: #374151;
+            border-radius: 9999px;
+            height: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .confidence-green { background: #10b981; }
+        .confidence-yellow { background: #f59e0b; }
+        .confidence-red { background: #ef4444; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-900 text-slate-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Hash Analyzer
+            </h1>
+            <p class="text-slate-400 text-lg">
+                Identify hash types, analyze patterns, and decode content
+            </p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="max-w-4xl mx-auto mb-8">
+            <div class="hash-card">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-2xl">🔍</span>
+                    <h2 class="text-xl font-semibold text-slate-100">Hash Analyzer</h2>
+                </div>
+                
+                <form id="hash-form" class="space-y-4">
+                    <div>
+                        <label for="hash-input" class="block text-sm font-medium text-slate-300 mb-2">
+                            Enter hash(es) to analyze (one per line):
+                        </label>
+                        <textarea
+                            id="hash-input"
+                            placeholder="Paste your hash here...&#10;5d41402abc4b2a76b9719d911017c592&#10;SGVsbG8gV29ybGQ="
+                            class="hash-input w-full h-32 resize-none"
+                        ></textarea>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button type="submit" id="analyze-btn" class="hash-button flex items-center gap-2">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                            Analyze
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="mt-6">
+                    <p class="text-sm text-slate-400 mb-3">Try these examples:</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="setExample('5d41402abc4b2a76b9719d911017c592')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1 rounded-md transition-colors">
+                            MD5
+                        </button>
+                        <button onclick="setExample('a94a8fe5ccb19ba61c4c0873d391e987982fbbd3')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1 rounded-md transition-colors">
+                            SHA-1
+                        </button>
+                        <button onclick="setExample('SGVsbG8gV29ybGQ=')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1 rounded-md transition-colors">
+                            Base64
+                        </button>
+                        <button onclick="setExample('48656c6c6f20576f726c64')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1 rounded-md transition-colors">
+                            Hex
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="max-w-6xl mx-auto"></div>
+
+        <!-- Footer -->
+        <div class="max-w-4xl mx-auto mt-12 pt-8 border-t border-slate-700">
+            <div class="text-center text-slate-500">
+                <p class="mb-2">
+                    🔍 Hash Analyzer - Powered by advanced pattern recognition
+                </p>
+                <p class="text-sm">
+                    Supports MD5, SHA1, SHA256, SHA512, bcrypt, NTLM, and many more hash types
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:4000';
+        let isLoading = false;
+
+        function setExample(example) {
+            document.getElementById('hash-input').value = example;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+        }
+
+        function getConfidenceColor(color) {
+            switch (color) {
+                case 'green': return 'text-green-400 bg-green-400/20 border-green-400/30';
+                case 'yellow': return 'text-yellow-400 bg-yellow-400/20 border-yellow-400/30';
+                case 'red': return 'text-red-400 bg-red-400/20 border-red-400/30';
+                default: return 'text-slate-400 bg-slate-400/20 border-slate-400/30';
+            }
+        }
+
+        function getConfidenceBarColor(color) {
+            switch (color) {
+                case 'green': return 'confidence-green';
+                case 'yellow': return 'confidence-yellow';
+                case 'red': return 'confidence-red';
+                default: return 'bg-slate-500';
+            }
+        }
+
+        function createResultCard(result, index) {
+            return `
+                <div class="hash-card mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-lg">#${index + 1}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-slate-400">Input:</span>
+                                <code class="bg-slate-700 px-2 py-1 rounded text-slate-200 text-sm">
+                                    ${result.input.length > 50 ? result.input.substring(0, 50) + '...' : result.input}
+                                </code>
+                                <button onclick="copyToClipboard('${result.input}')" class="text-slate-400 hover:text-slate-200 transition-colors">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- Detection Results -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-lg">🔎</span>
+                                <h3 class="text-lg font-semibold text-slate-100">Detection Results</h3>
+                            </div>
+                            ${result.results.length > 0 ? `
+                                <div class="space-y-3">
+                                    ${result.results.map(r => `
+                                        <div class="bg-slate-700/50 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <div class="flex items-center gap-3">
+                                                    <span class="font-medium text-slate-200">${r.name}</span>
+                                                    <span class="px-2 py-1 rounded-full text-xs font-medium border ${getConfidenceColor(r.color)}">
+                                                        ${r.color.toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <span class="text-sm text-slate-400">
+                                                    ${Math.round(r.score * 100)}%
+                                                </span>
+                                            </div>
+                                            <div class="confidence-bar mb-2">
+                                                <div class="confidence-fill ${getConfidenceBarColor(r.color)}" style="width: ${r.score * 100}%"></div>
+                                            </div>
+                                            <div class="text-xs text-slate-400">
+                                                ${r.reasons.join(', ')}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : '<p class="text-slate-400 italic">No hash types detected</p>'}
+                        </div>
+
+                        <!-- Character Statistics -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-lg">📊</span>
+                                <h3 class="text-lg font-semibold text-slate-100">Character Statistics</h3>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div class="bg-slate-700/50 rounded-lg p-3">
+                                    <div class="text-2xl font-bold text-blue-400">${result.stats.total}</div>
+                                    <div class="text-sm text-slate-400">Total Characters</div>
+                                </div>
+                                <div class="bg-slate-700/50 rounded-lg p-3">
+                                    <div class="text-2xl font-bold text-green-400">${result.stats.unique}</div>
+                                    <div class="text-sm text-slate-400">Unique Characters</div>
+                                </div>
+                                <div class="bg-slate-700/50 rounded-lg p-3">
+                                    <div class="text-2xl font-bold text-yellow-400">${result.stats.letters}</div>
+                                    <div class="text-sm text-slate-400">Letters</div>
+                                </div>
+                                <div class="bg-slate-700/50 rounded-lg p-3">
+                                    <div class="text-2xl font-bold text-purple-400">${result.stats.digits}</div>
+                                    <div class="text-sm text-slate-400">Digits</div>
+                                </div>
+                                <div class="bg-slate-700/50 rounded-lg p-3">
+                                    <div class="text-2xl font-bold text-red-400">${result.stats.special}</div>
+                                    <div class="text-sm text-slate-400">Special</div>
+                                </div>
+                                <div class="bg-slate-700/50 rounded-lg p-3">
+                                    <div class="text-2xl font-bold text-cyan-400">${result.stats.entropy.toFixed(2)}</div>
+                                    <div class="text-sm text-slate-400">Entropy</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Decoding Attempts -->
+                        ${(result.decoding.base64 || result.decoding.hex) ? `
+                            <div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="text-lg">🔐</span>
+                                    <h3 class="text-lg font-semibold text-slate-100">Decoding Attempts</h3>
+                                </div>
+                                <div class="space-y-2">
+                                    ${result.decoding.base64 ? `
+                                        <div class="bg-slate-700/50 rounded-lg p-3">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <span class="text-sm font-medium text-slate-300">Base64:</span>
+                                                <button onclick="copyToClipboard('${result.decoding.base64}')" class="text-slate-400 hover:text-slate-200 transition-colors">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <code class="text-slate-200 text-sm break-all">${result.decoding.base64}</code>
+                                        </div>
+                                    ` : ''}
+                                    ${result.decoding.hex ? `
+                                        <div class="bg-slate-700/50 rounded-lg p-3">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <span class="text-sm font-medium text-slate-300">Hex:</span>
+                                                <button onclick="copyToClipboard('${result.decoding.hex}')" class="text-slate-400 hover:text-slate-200 transition-colors">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <code class="text-slate-200 text-sm break-all">${result.decoding.hex}</code>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function analyzeHashes() {
+            const input = document.getElementById('hash-input').value.trim();
+            if (!input) return;
+
+            const inputs = input.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            isLoading = true;
+            const analyzeBtn = document.getElementById('analyze-btn');
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = `
+                <div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                Analyzing...
+            `;
+
+            try {
+                const response = await fetch(`${API_URL}/api/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ inputs })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    const resultsDiv = document.getElementById('results');
+                    resultsDiv.innerHTML = `
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-semibold">
+                                Analysis Results (${data.data.length} input${data.data.length !== 1 ? 's' : ''})
+                            </h2>
+                        </div>
+                        ${data.data.map((result, index) => createResultCard(result, index)).join('')}
+                    `;
+                } else {
+                    document.getElementById('results').innerHTML = `
+                        <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-red-400">⚠️</span>
+                                <span class="text-red-300">${data.error || 'Analysis failed'}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('results').innerHTML = `
+                    <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-red-400">⚠️</span>
+                            <span class="text-red-300">Failed to connect to the analysis service. Make sure the backend is running.</span>
+                        </div>
+                    </div>
+                `;
+            } finally {
+                isLoading = false;
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = `
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    Analyze
+                `;
+            }
+        }
+
+        document.getElementById('hash-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            analyzeHashes();
+        });
+    </script>
+</body>
+</html>

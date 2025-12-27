@@ -1,0 +1,24 @@
+=== HASH PATTERN VALIDATION REPORT ===
+
+Total patterns: 714
+Patterns with regex: 624 (87.4%)
+Patterns with prefixes: 161 (22.5%)
+Patterns with examples: 626 (87.7%)
+
+Charset distribution:
+  ascii: 517 (72.4%)
+  base64: 33 (4.6%)
+  hex: 162 (22.7%)
+  unknown: 2 (0.3%)
+
+Length distribution (top 10):
+  1036 chars: 36 patterns
+  64 chars: 25 patterns
+  32 chars: 24 patterns
+  128 chars: 21 patterns
+  81 chars: 15 patterns
+  37 chars: 14 patterns
+  16 chars: 14 patterns
+  34 chars: 14 patterns
+  65 chars: 14 patterns
+  73 chars: 14 patterns
